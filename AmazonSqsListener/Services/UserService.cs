@@ -34,20 +34,27 @@ public class UserService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            ReceiveMessageResponse? messageResponse = await _sqs.ReceiveMessageAsync(receiveRequest, stoppingToken);
-            
-            if (messageResponse.HttpStatusCode != HttpStatusCode.OK)
+            try
             {
-                _logger.LogError("An error occured");
-               
-                continue;
+                ReceiveMessageResponse? messageResponse = await _sqs.ReceiveMessageAsync(receiveRequest, stoppingToken);
+
+                if (messageResponse.HttpStatusCode != HttpStatusCode.OK)
+                {
+                    _logger.LogError("An error occured");
+
+                    continue;
+                }
+
+                foreach (Message? message in messageResponse.Messages)
+                {
+                    string? messageTypeName = message.MessageAttributes.GetValueOrDefault(nameof(IMessage.MessageTypeName))?.StringValue;
+
+                    await _sqs.DeleteMessageAsync(queueUrl.QueueUrl, message.ReceiptHandle, stoppingToken);
+                }
             }
-
-            foreach (Message? message in messageResponse.Messages)
+            catch (Exception e)
             {
-                string? messageTypeName = message.MessageAttributes.GetValueOrDefault(nameof(IMessage.MessageTypeName))?.StringValue;
-
-                await _sqs.DeleteMessageAsync(queueUrl.QueueUrl, message.ReceiptHandle, stoppingToken);
+                _logger.LogError(e, e.Message);
             }
         }
     }
