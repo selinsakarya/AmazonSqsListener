@@ -1,9 +1,20 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿using Amazon;
+using Amazon.SQS;
+using AmazonSqsListener.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 internal class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
-        Console.WriteLine("Hello, World!");
+        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+
+        builder.Services.AddHostedService<UserService>();
+        builder.Services.AddSingleton<IAmazonSQS>(_ => new AmazonSQSClient(RegionEndpoint.EUWest2));
+
+        using IHost host = builder.Build();
+
+        await host.RunAsync();
     }
 }
